@@ -2,12 +2,14 @@ import { Request, Response } from 'express';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/authMiddleware';
 import PDFDocument from 'pdfkit';
+import { logInfo, logError } from '../utils/logger';
 
 // Get transactions for the current user
 export const getTransactions = async (req: AuthRequest, res: Response): Promise<void> => {
+  logInfo('Function called: getTransactions', { userId: req.user?.userId });
   try {
     // Get user ID from the authenticated request
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
       res.status(401).json({ message: 'User not authenticated' });
@@ -19,14 +21,15 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
       .sort({ date: -1 }) // Sort by date descending (newest first)
       .exec();
 
+    logInfo('getTransactions output', { count: transactions.length, userId });
     res.status(200).json({
       success: true,
       count: transactions.length,
       data: transactions
     });
   } catch (error) {
-    console.error('Error fetching transactions:', error);
-    res.status(500).json({ 
+    logError('Error fetching transactions', error);
+    res.status(500).json({
       success: false,
       message: 'Server error while fetching transactions' 
     });
@@ -35,6 +38,7 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
 
 // Generate PDF report with selected columns
 export const getTransactionReport = async (req: AuthRequest, res: Response): Promise<void> => {
+  logInfo('Function called: getTransactionReport', { userId: req.user?.id });
   try {
     // Get user ID from the authenticated request
     const userId = req.user?.id;
@@ -169,9 +173,10 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
     // Finalize the PDF
     doc.end();
 
+    logInfo('getTransactionReport output', { columns, transactionCount: transactions.length, userId });
   } catch (error) {
-    console.error('Error generating transaction report:', error);
-    res.status(500).json({ 
+    logError('Error generating transaction report', error);
+    res.status(500).json({
       success: false,
       message: 'Server error while generating transaction report' 
     });

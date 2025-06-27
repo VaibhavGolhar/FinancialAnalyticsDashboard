@@ -2,9 +2,11 @@ import { Request, Response } from 'express';
 import { validationResult } from 'express-validator';
 import User, { IUser } from '../models/User';
 import { generateToken } from '../config/jwt';
+import { logInfo, logError } from '../utils/logger';
 
 // Register a new user
 export const register = async (req: Request, res: Response): Promise<void> => {
+  logInfo('Register attempt', { userId: req.body.userId });
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -21,7 +23,8 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     if (existingUser) {
-      res.status(400).json({ 
+      logInfo('Register failed: user already exists', { userId });
+      res.status(400).json({
         message: 'User already exists with that email or username' 
       });
       return;
@@ -49,14 +52,16 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
       token
     });
+    logInfo('User registered successfully', { userId: user.userId, id: user._id });
   } catch (error) {
-    console.error('Registration error:', error);
+    logError('Registration error', error);
     res.status(500).json({ message: 'Server error during registration' });
   }
 };
 
 // Login user
 export const login = async (req: Request, res: Response): Promise<void> => {
+  logInfo('Login attempt', { userId: req.body.userId });
   try {
     // Check for validation errors
     const errors = validationResult(req);
@@ -72,6 +77,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
 
     // Check if user exists
     if (!user) {
+      logInfo('Login failed: user not found', { userId });
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -79,6 +85,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     // Check if password is correct
     const isMatch = await user.comparePassword(password);
     if (!isMatch) {
+      logInfo('Login failed: invalid password', { userId });
       res.status(401).json({ message: 'Invalid credentials' });
       return;
     }
@@ -96,8 +103,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       },
       token
     });
+    logInfo('Login successful', { userId: user.userId, id: user._id });
   } catch (error) {
-    console.error('Login error:', error);
+    logError('Login error', error);
     res.status(500).json({ message: 'Server error during login' });
   }
 };

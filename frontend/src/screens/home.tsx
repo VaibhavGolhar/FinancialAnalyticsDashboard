@@ -4,6 +4,7 @@ import styles from './home.module.css';
 
 const Home: React.FC = () => {
     const [user, setUser] = useState<any>(null);
+    const [transactions, setTransactions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -27,6 +28,8 @@ const Home: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     setUser(data.user);
+                    // Fetch transactions after user is set
+                    fetchTransactions(token);
                 } else {
                     // If token is invalid, redirect to login
                     localStorage.removeItem('token');
@@ -36,6 +39,24 @@ const Home: React.FC = () => {
                 console.error('Error fetching user data:', error);
             } finally {
                 setLoading(false);
+            }
+        };
+
+        const fetchTransactions = async (token: string) => {
+            try {
+                const response = await fetch('/api/get-transactions', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    setTransactions(data.data || []);
+                } else {
+                    setTransactions([]);
+                }
+            } catch (error) {
+                setTransactions([]);
             }
         };
 
@@ -70,9 +91,34 @@ const Home: React.FC = () => {
                 <div className={styles.dashboardGrid}>
                     <div className={styles.card}>
                         <h3>Recent Transactions</h3>
-                        <div className={styles.placeholder}>
-                            <p>Your recent transactions will appear here.</p>
-                        </div>
+                        {transactions.length === 0 ? (
+                            <div className={styles.placeholder}>
+                                <p>No transactions found.</p>
+                            </div>
+                        ) : (
+                            <div className={styles.transactionsTableWrapper}>
+                                <table className={styles.transactionsTable}>
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Description</th>
+                                            <th>Category</th>
+                                            <th>Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {transactions.map((txn) => (
+                                            <tr key={txn._id}>
+                                                <td>{new Date(txn.date).toLocaleDateString()}</td>
+                                                <td>{txn.description}</td>
+                                                <td>{txn.category}</td>
+                                                <td>{txn.amount}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
 
                     <div className={styles.card}>
