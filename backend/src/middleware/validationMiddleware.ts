@@ -2,15 +2,10 @@ import { body } from 'express-validator';
 
 // Validation rules for user registration
 export const registerValidation = [
-  body('username')
-    .notEmpty().withMessage('Username is required')
-    .isLength({ min: 3 }).withMessage('Username must be at least 3 characters long')
+  body('userId')
+    .notEmpty().withMessage('User id is required')
+    .isLength({ min: 3 }).withMessage('User id must be at least 3 characters long')
     .trim(),
-  
-  body('email')
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Please enter a valid email address')
-    .normalizeEmail(),
   
   body('password')
     .notEmpty().withMessage('Password is required')
@@ -19,10 +14,8 @@ export const registerValidation = [
 
 // Validation rules for user login
 export const loginValidation = [
-  body('email')
-    .notEmpty().withMessage('Email is required')
-    .isEmail().withMessage('Please enter a valid email address')
-    .normalizeEmail(),
+  body('userId')
+    .notEmpty().withMessage('User id is required'),
   
   body('password')
     .notEmpty().withMessage('Password is required')

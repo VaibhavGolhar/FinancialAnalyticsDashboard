@@ -13,11 +13,11 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { username, email, password } = req.body;
+    const { userId, password } = req.body;
 
     // Check if user already exists
     const existingUser = await User.findOne({ 
-      $or: [{ email }, { username }] 
+      $or: [{ userId }]
     });
 
     if (existingUser) {
@@ -29,8 +29,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
 
     // Create new user
     const user = new User({
-      username,
-      email,
+      userId,
       password
     });
 
@@ -45,8 +44,7 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       message: 'User registered successfully',
       user: {
         id: user._id,
-        username: user.username,
-        email: user.email,
+        userId: user.userId,
         createdAt: user.createdAt
       },
       token
@@ -67,10 +65,10 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const { email, password } = req.body;
+    const { userId, password } = req.body;
 
     // Find user by email
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ userId });
 
     // Check if user exists
     if (!user) {
@@ -93,8 +91,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       message: 'Login successful',
       user: {
         id: user._id,
-        username: user.username,
-        email: user.email,
+        userId: user.userId,
         createdAt: user.createdAt
       },
       token

@@ -1,17 +1,59 @@
-import {useEffect, useState} from 'react'
+import {type JSX, useEffect, useState} from 'react'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import './App.css'
+import Landing from './screens/landing'
+import Home from './screens/home'
 
 function App() {
-    const [msg, setMsg] = useState('');
+    const [isHealthy, setIsHealthy] = useState(false);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         fetch('/api/health')
-            .then((res) => res.text()) // or res.json() depending on your API response
-            .then((data) => setMsg(data))
-            .catch((err) => setMsg('Error: ' + err.message));
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.status === 'OK') {
+                    setIsHealthy(true);
+                } else {
+                    setError('API health check failed');
+                }
+            })
+            .catch((err) => setError('Error: ' + err.message));
     }, []);
 
-    return <div>{msg}</div>;
+    // Check if user is authenticated
+    const isAuthenticated = () => {
+        return localStorage.getItem('token') !== null;
+    };
+
+    // Protected route component
+    const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
+        if (!isAuthenticated()) {
+            return <Navigate to="/" replace />;
+        }
+        return children;
+    };
+
+    if (!isHealthy) {
+        return <div>{error || 'Checking API health...'}</div>;
+    }
+
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route 
+                    path="/home" 
+                    element={
+                        <ProtectedRoute>
+                            <Home />
+                        </ProtectedRoute>
+                    } 
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+        </Router>
+    );
 }
 
 export default App

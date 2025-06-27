@@ -3,8 +3,7 @@ import bcrypt from 'bcrypt';
 
 // Define base interface for User properties
 export interface IUserBase {
-  username: string;
-  email: string;
+  userId: string;
   password: string;
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +16,7 @@ export interface IUserMethods {
 
 // Define the User interface that combines Document, properties and methods
 export interface IUser extends Document {
-  username: string;
-  email: string;
+  userId: string;
   password: string;
   createdAt: Date;
   updatedAt: Date;
@@ -28,20 +26,12 @@ export interface IUser extends Document {
 // Create the User schema
 const UserSchema: Schema = new Schema(
   {
-    username: {
+    userId: {
       type: String,
       required: [true, 'Username is required'],
       unique: true,
       trim: true,
       minlength: [3, 'Username must be at least 3 characters long'],
-    },
-    email: {
-      type: String,
-      required: [true, 'Email is required'],
-      unique: true,
-      trim: true,
-      lowercase: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email address'],
     },
     password: {
       type: String,

@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/database';
 import authRoutes from './routes/authRoutes';
+import transactionRoutes from './routes/transactionRoutes';
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,9 @@ app.get('/api/health', (req, res) => {
 
 // Auth routes
 app.use('/api/auth', authRoutes);
+
+// Transaction routes
+app.use('/api', transactionRoutes);
 
 // Start server
 app.listen(port, () => {
