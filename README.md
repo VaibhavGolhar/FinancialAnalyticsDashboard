@@ -2,7 +2,7 @@
 
 A full-stack web application for analyzing and visualizing financial transactions. This project includes a secure backend API and a responsive frontend dashboard.
 
-## 📦 Repository Structure
+## Repository Structure
 
 This monorepo contains two main components:
 ```
