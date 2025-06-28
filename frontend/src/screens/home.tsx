@@ -14,6 +14,7 @@ const Home: React.FC = () => {
     const [sortOption, setSortOption] = useState('date-desc');
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [searchTerm, setSearchTerm] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -117,8 +118,25 @@ const Home: React.FC = () => {
         });
     };
 
-    // Apply filtering, then sorting, then pagination
-    const filteredTransactions = filterTransactions(transactions);
+    // Searching logic
+    const searchTransactions = (txs: any[]) => {
+        if (!searchTerm.trim()) return txs;
+        const lower = searchTerm.toLowerCase();
+        return txs.filter(t => {
+            // Match user_id
+            if (t.user_id && t.user_id.toLowerCase().includes(lower)) return true;
+            // Match amount (exact or partial)
+            if (t.amount && t.amount.toString().includes(lower)) return true;
+            // Match date (any format)
+            if (t.date && new Date(t.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' }).toLowerCase().includes(lower)) return true;
+            if (t.date && t.date.toLowerCase().includes(lower)) return true;
+            return false;
+        });
+    };
+
+    // Apply searching, then filtering, then sorting, then pagination
+    const searchedTransactions = searchTransactions(transactions);
+    const filteredTransactions = filterTransactions(searchedTransactions);
     const sortedTransactions = sortTransactions(filteredTransactions);
     const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
     const startIndex = (currentPage - 1) * transactionsPerPage;
@@ -319,7 +337,17 @@ const Home: React.FC = () => {
                     <div className={styles.transactionsTableHeader}>
                         <h3 className={styles.chartTitle}>Transactions</h3>
                         <div className={styles.transactionsSearch}>
-                            <input type="text" className={styles.searchInput} placeholder="Search for anything..." style={{width: '200px'}} />
+                            <input
+                                type="text"
+                                className={styles.searchInput}
+                                placeholder="Search for anything..."
+                                style={{width: '200px'}}
+                                value={searchTerm}
+                                onChange={e => {
+                                    setSearchTerm(e.target.value);
+                                    setCurrentPage(1);
+                                }}
+                            />
                         </div>
                         <div style={{marginLeft: '16px', display: 'flex', gap: '8px', alignItems: 'center'}}>
                             <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
