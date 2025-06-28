@@ -195,7 +195,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
     ]
     ```
 
-#### Generate Transaction Report (PDF)
+#### Generate Transaction Report (CSV)
 
 - **URL**: `/api/transactions/get-report`
 - **Method**: `POST`
