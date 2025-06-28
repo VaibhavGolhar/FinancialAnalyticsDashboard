@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './home.module.css';
+import OverviewChart from './OverviewChart';
 
 const Home: React.FC = () => {
     const [user, setUser] = useState<any>(null);
@@ -101,10 +102,10 @@ const Home: React.FC = () => {
         return '-'; // fallback: treat as expense
     };
 
-    // Updated calculations using category
+    // Updated calculations using category (case-insensitive)
     const balance = transactions.reduce((total, t) => total + getSignedAmount(t), 0);
-    const totalRevenue = transactions.filter(t => t.category === 'revenue').reduce((total, t) => total + Math.abs(t.amount), 0);
-    const totalExpenses = transactions.filter(t => t.category === 'expense').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const totalRevenue = transactions.filter(t => t.category && t.category.toLowerCase() === 'revenue').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const totalExpenses = transactions.filter(t => t.category && t.category.toLowerCase() === 'expense').reduce((total, t) => total + Math.abs(t.amount), 0);
 
     if (loading) {
         return <div className={styles.loadingContainer}>Loading...</div>;
@@ -228,10 +229,7 @@ const Home: React.FC = () => {
                             </div>
                         </div>
                         <div className={styles.chartContainer}>
-                            <div className={styles.mockChart}></div>
-                            <div style={{position: 'absolute', top: '60px', left: '50%', transform: 'translateX(-50%)', background: '#10b981', color: 'white', padding: '8px 16px', borderRadius: '8px', fontWeight: 'bold'}}>
-                                ${totalRevenue.toFixed(2)}
-                            </div>
+                            <OverviewChart transactions={transactions} />
                         </div>
                     </div>
 
@@ -301,7 +299,12 @@ const Home: React.FC = () => {
                                     {getAmountPrefix(transaction)}${Math.abs(transaction.amount).toFixed(2)}
                                 </div>
                                 <div>
-                                    <span className={`${styles.statusBadge} ${transaction.status === 'completed' ? styles.statusCompleted : styles.statusPending}`}>
+                                    <span className={
+                                        `${styles.statusBadge} ` +
+                                        (transaction.status && transaction.status.toLowerCase() === 'pending'
+                                            ? styles.statusPending
+                                            : styles.statusCompleted)
+                                    }>
                                         {transaction.status || 'Completed'}
                                     </span>
                                 </div>

@@ -17,7 +17,7 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
     }
 
     // Fetch transactions for the user
-    const transactions = await Transaction.find({ user_id: userId })
+    const transactions = await Transaction.find({})
       .sort({ date: -1 }) // Sort by date descending (newest first)
       .exec();
 
