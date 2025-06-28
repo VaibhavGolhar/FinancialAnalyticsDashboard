@@ -56,6 +56,7 @@ const Landing: React.FC = () => {
             }
         } catch (err) {
             setError('Network error. Please try again later.');
+            console.log(err);
         } finally {
             setIsLoading(false);
         }

@@ -8,24 +8,30 @@ const ReportModal: React.FC<{
   open: boolean;
   onClose: () => void;
 }> = ({ open, onClose }) => {
-  const [columns, setColumns] = useState({
-    date: true,
-    amount: true,
-    category: true,
-    status: true,
-    user_id: true,
-  });
-  const [loading, setLoading] = useState(false);
+    type ColumnKey = 'date' | 'amount' | 'category' | 'status' | 'user_id';
 
-  const handleCheckbox = (col: string) => {
-    setColumns(prev => ({ ...prev, [col]: !prev[col] }));
+    const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
+        date: true,
+        amount: true,
+        category: true,
+        status: true,
+        user_id: true,
+    });
+
+    const [loading, setLoading] = useState(false);
+
+
+  const handleCheckbox = (col: ColumnKey) => {
+        setColumns(prev => ({ ...prev, [col]: !prev[col] }));
   };
 
   const handleGenerate = async () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const selectedColumns = Object.keys(columns).filter(k => columns[k]);
+        const selectedColumns = (Object.keys(columns) as (keyof typeof columns)[]).filter(
+            k => columns[k]
+        );
       const res = await fetch('/api/get-report', {
         method: 'POST',
         headers: {
@@ -48,6 +54,7 @@ const ReportModal: React.FC<{
       onClose();
     } catch (e) {
       alert('Failed to generate report.');
+      console.log(e);
     } finally {
       setLoading(false);
     }
@@ -59,12 +66,16 @@ const ReportModal: React.FC<{
       <div style={{background:'#1e293b',padding:32,borderRadius:12,minWidth:320,color:'#fff',boxShadow:'0 2px 16px #0008'}}>
         <h2 style={{marginBottom:16}}>Generate Report</h2>
         <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
-          {Object.keys(columns).map(col => (
-            <label key={col} style={{display:'flex',alignItems:'center',gap:8}}>
-              <input type="checkbox" checked={columns[col]} onChange={() => handleCheckbox(col)} />
-              {col.charAt(0).toUpperCase() + col.slice(1)}
-            </label>
-          ))}
+            {(Object.keys(columns) as ColumnKey[]).map(col => (
+                <label key={col} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                        type="checkbox"
+                        checked={columns[col]}
+                        onChange={() => handleCheckbox(col)}
+                    />
+                    {col.charAt(0).toUpperCase() + col.slice(1)}
+                </label>
+            ))}
         </div>
         <button onClick={handleGenerate} disabled={loading} style={{background:'#10b981',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer',marginRight:8}}>
           {loading ? 'Generating...' : 'Generate Report'}
@@ -76,8 +87,17 @@ const ReportModal: React.FC<{
 };
 
 const Home: React.FC = () => {
-    const [user, setUser] = useState<any>(null);
-    const [transactions, setTransactions] = useState<any[]>([]);
+    interface Transaction {
+        id: number;
+        date: string;
+        amount: number;
+        category: 'Revenue' | 'Expense' | string;
+        status: 'Paid' | 'Pending' | 'Failed' | string;
+        user_id: string;
+        user_profile: string;
+    }
+
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const transactionsPerPage = 10;
@@ -108,9 +128,6 @@ const Home: React.FC = () => {
                 });
 
                 if (response.ok) {
-                    const data = await response.json();
-                    setUser(data.user);
-                    // Fetch transactions after user is set
                     fetchTransactions(token);
                 } else {
                     // If token is invalid, redirect to login
@@ -134,8 +151,8 @@ const Home: React.FC = () => {
                 if (response.ok) {
                     const data = await response.json();
                     // Sort transactions by date (most recent first)
-                    const sortedTransactions = (data.data || []).sort((a: any, b: any) =>
-                        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                    const sortedTransactions = (data.data || []).sort((a: Transaction, b: Transaction) =>
+                        new Date(b.date).getTime() - new Date(a.date).getTime()
                     );
                     setTransactions(sortedTransactions);
                 } else {
@@ -143,6 +160,7 @@ const Home: React.FC = () => {
                 }
             } catch (error) {
                 setTransactions([]);
+                console.log(error);
             }
         };
 
@@ -155,7 +173,7 @@ const Home: React.FC = () => {
     };
 
     // Sorting logic
-    const sortTransactions = (txs: any[]) => {
+    const sortTransactions = (txs: Transaction[]) => {
         const sorted = [...txs];
         switch (sortOption) {
             case 'date-asc':
@@ -183,7 +201,7 @@ const Home: React.FC = () => {
     };
 
     // Filtering logic
-    const filterTransactions = (txs: any[]) => {
+    const filterTransactions = (txs: Transaction[]) => {
         return txs.filter(t => {
             const categoryMatch = filterCategory === 'all' || (t.category && t.category.toLowerCase() === filterCategory);
             const statusMatch = filterStatus === 'all' || (t.status && t.status.toLowerCase() === filterStatus);
@@ -192,7 +210,7 @@ const Home: React.FC = () => {
     };
 
     // Searching logic
-    const searchTransactions = (txs: any[]) => {
+    const searchTransactions = (txs: Transaction[]) => {
         if (!searchTerm.trim()) return txs;
         const lower = searchTerm.toLowerCase();
         return txs.filter(t => {
@@ -225,13 +243,13 @@ const Home: React.FC = () => {
     };
 
     // Helper functions for amount sign and value
-    const getSignedAmount = (transaction: any) => {
+    /*const getSignedAmount = (transaction: any) => {
         // Defensive: treat missing/invalid category as expense
         if (transaction.category && transaction.category.toLowerCase() === 'revenue') return Math.abs(transaction.amount);
         if (transaction.category && transaction.category.toLowerCase() === 'expense') return -Math.abs(transaction.amount);
         return -Math.abs(transaction.amount); // fallback: treat as expense
-    };
-    const getAmountPrefix = (transaction: any) => {
+    };*/
+    const getAmountPrefix = (transaction: Transaction) => {
         if (transaction.category && transaction.category.toLowerCase() === 'revenue') return '+';
         if (transaction.category && transaction.category.toLowerCase() === 'expense') return '-';
         return '-'; // fallback: treat as expense

@@ -8,7 +8,7 @@ import {
   LineElement,
   Title,
   Tooltip,
-  Legend,
+  Legend, type TooltipItem, type TooltipModel,
 
 } from 'chart.js';
 
@@ -23,15 +23,25 @@ ChartJS.register(
     Legend
 );
 
+interface Transaction {
+  id: number;
+  date: string;
+  amount: number;
+  category: 'Revenue' | 'Expense' | string;
+  status: 'Paid' | 'Pending' | 'Failed' | string;
+  user_id: string;
+  user_profile: string;
+}
+
 interface OverviewChartProps {
-  transactions: any[];
+  transactions: Transaction[];
   view: 'Yearly' | 'Monthly';
   selectedMonthYear?: string;
   monthYearOptions?: string[];
   onMonthYearChange?: (monthYear: string) => void;
 }
 
-function getMonthlyData(transactions: any[]) {
+function getMonthlyData(transactions: Transaction[]) {
   const monthlyRevenue: { [key: string]: number } = {};
   const monthlyExpenses: { [key: string]: number } = {};
 
@@ -63,7 +73,7 @@ function getMonthlyData(transactions: any[]) {
   };
 }
 
-function getDailyData(transactions: any[], monthYear: string) {
+function getDailyData(transactions: Transaction[], monthYear: string) {
   const dailyRevenue: { [key: string]: number } = {};
   const dailyExpenses: { [key: string]: number } = {};
   transactions.forEach(t => {
@@ -164,7 +174,8 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions, view, selec
       ],
     };
   }
-  const chartRef = useRef<any>(null);
+  type ChartRefType = ChartJS<'line'> | null;
+  const chartRef = useRef<ChartRefType>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   // Extract year from last label (or current year if none)
@@ -176,26 +187,21 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions, view, selec
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
-      legend: {
-        display: false,
-      },
-      title: {
-        display: false,
-      },
+      legend: { display: false },
+      title: { display: false },
       tooltip: {
         enabled: true,
         mode: 'index' as const,
         intersect: false,
         callbacks: {
-          label: (context: any) => `$${context.parsed.y.toFixed(2)}`,
-        },
-        external: (context: any) => {
-          if (context.tooltip && context.tooltip.dataPoints && context.tooltip.dataPoints.length > 0) {
+          label: (context: TooltipItem<'line'>) => `$${context.parsed.y.toFixed(2)}`,        },
+          external: (context: { tooltip: TooltipModel<'line'> }) => {
+          if (context.tooltip?.dataPoints?.length > 0) {
             setHoverIndex(context.tooltip.dataPoints[0].dataIndex);
           } else {
             setHoverIndex(null);
           }
-        }
+        },
       },
     },
     hover: {
@@ -207,25 +213,26 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions, view, selec
         beginAtZero: true,
         grace: '10%',
         ticks: {
-          callback: (value: number) => `$${value}`,
+          callback: (tickValue: string | number): string => {
+            return `$${tickValue}`;
+          },
           color: '#fff',
-          stepSize: undefined, // Let chart.js auto-calculate
         },
         grid: {
-          color: 'rgba(255,255,255,0.1)'
-        }
+          color: 'rgba(255,255,255,0.1)',
+        },
       },
       x: {
         ticks: {
           color: '#fff',
-          autoSkip: false, // Show all
+          autoSkip: false,
           maxRotation: 0,
           minRotation: 0,
         },
         grid: {
-          color: 'rgba(255,255,255,0.05)'
-        }
-      }
+          color: 'rgba(255,255,255,0.05)',
+        },
+      },
     },
     interaction: {
       mode: 'index' as const,
@@ -254,7 +261,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions, view, selec
 
   return (
     <div style={{height: '80%', width: '100%', paddingBottom: 0, position: 'relative'}}>
-      {/* Year display at top right, month dropdown at left if Monthly */}
+      {/* Year display at top right, month dropdown at the left if Monthly */}
       <div style={{position: 'absolute', top: 0, right: 0, color: '#fff', fontWeight: 600, fontSize: 18, zIndex: 2, padding: '8px 16px'}}>
         {year}
       </div>
