@@ -71,8 +71,32 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
     }
 
     // Fetch transactions for the user
-    const transactions = await Transaction.find({ })
-      .sort({ date: -1 }) // Sort by date descending (newest first)
+    let query: any = {};
+    // Apply category filter
+    if (req.body.filterCategory && req.body.filterCategory !== 'all') {
+      query.category = { $regex: new RegExp(`^${req.body.filterCategory}$`, 'i') };
+    }
+    // Apply status filter
+    if (req.body.filterStatus && req.body.filterStatus !== 'all') {
+      query.status = { $regex: new RegExp(`^${req.body.filterStatus}$`, 'i') };
+    }
+
+    // Determine sort option
+    let sort: any = { date: -1 };
+    if (req.body.sort) {
+      switch (req.body.sort) {
+        case 'date-asc': sort = { date: 1 }; break;
+        case 'date-desc': sort = { date: -1 }; break;
+        case 'amount-asc': sort = { amount: 1 }; break;
+        case 'amount-desc': sort = { amount: -1 }; break;
+        case 'user-asc': sort = { user_id: 1 }; break;
+        case 'user-desc': sort = { user_id: -1 }; break;
+        default: break;
+      }
+    }
+
+    const transactions = await Transaction.find(query)
+      .sort(sort)
       .exec();
 
     if (transactions.length === 0) {
@@ -83,7 +107,7 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    // Create a CSV instead of PDF
+    // Create a CSV
     const csvRows = [];
     // Add header row, with special label for amount
     const headerRow = columns.map(col => col === 'amount' ? 'Amount (in $)' : col);
@@ -109,9 +133,10 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
     res.setHeader('Content-Type', 'text/csv');
     res.setHeader('Content-Disposition', 'attachment; filename="transactions_report.csv"');
     res.send(csvContent);
-    return;
 
-    logInfo('getTransactionReport output', { columns, transactionCount: transactions.length, userId });
+    logInfo('getTransactionReport output', { columns, transactionCount: transactions.length });
+
+    return;
   } catch (error) {
     logError('Error generating transaction report', error);
     res.status(500).json({

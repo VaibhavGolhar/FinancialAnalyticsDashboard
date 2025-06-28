@@ -9,79 +9,193 @@ const ReportModal: React.FC<{
   onClose: () => void;
 }> = ({ open, onClose }) => {
     type ColumnKey = 'date' | 'amount' | 'category' | 'status' | 'user_id';
-
-    const [columns, setColumns] = useState<Record<ColumnKey, boolean>>({
-        date: true,
-        amount: true,
-        category: true,
-        status: true,
-        user_id: true,
-    });
-
+    const allColumns: { key: ColumnKey; label: string }[] = [
+        { key: 'date', label: 'Date' },
+        { key: 'amount', label: 'Amount' },
+        { key: 'category', label: 'Category' },
+        { key: 'status', label: 'Status' },
+        { key: 'user_id', label: 'User ID' },
+    ];
+    // State for selected and unselected columns
+    const [selectedColumns, setSelectedColumns] = useState<ColumnKey[]>(allColumns.map(c => c.key));
+    const [unselectedColumns, setUnselectedColumns] = useState<ColumnKey[]>([]);
     const [loading, setLoading] = useState(false);
-
-
-  const handleCheckbox = (col: ColumnKey) => {
-        setColumns(prev => ({ ...prev, [col]: !prev[col] }));
-  };
-
-  const handleGenerate = async () => {
-    setLoading(true);
-    try {
-      const token = localStorage.getItem('token');
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
-      const selectedColumns = (Object.keys(columns) as (keyof typeof columns)[]).filter(
-        k => columns[k]
-      );
-      const res = await fetch(`${apiBaseUrl}/api/get-report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ columns: selectedColumns }),
-      });
-      if (!res.ok) throw new Error('Failed to generate report');
-      const blob = await res.blob();
-      // Download as CSV
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'transactions_report.csv';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-      onClose();
-    } catch (e) {
-      alert('Failed to generate report.');
-      console.log(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!open) return null;
-  return (
-    <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-      <div style={{background:'#1e293b',padding:32,borderRadius:12,minWidth:320,color:'#fff',boxShadow:'0 2px 16px #0008'}}>
-        <h2 style={{marginBottom:16}}>Generate Report</h2>
-        <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
-            {(Object.keys(columns) as ColumnKey[]).map(col => (
-                <label key={col} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                        type="checkbox"
-                        checked={columns[col]}
-                        onChange={() => handleCheckbox(col)}
-                    />
-                    {col.charAt(0).toUpperCase() + col.slice(1)}
-                </label>
-            ))}
+    // Filter and sort state (reuse from main table)
+    const [sortOption, setSortOption] = useState('date-desc');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+    // Drag and drop handlers
+    const handleDragStart = (index: number) => {
+        setDraggingIndex(index);
+    };
+    const handleDragOver = (index: number) => {
+        if (draggingIndex === null || draggingIndex === index) return;
+        const newOrder = [...selectedColumns];
+        const [removed] = newOrder.splice(draggingIndex, 1);
+        newOrder.splice(index, 0, removed);
+        setSelectedColumns(newOrder);
+        setDraggingIndex(index);
+    };
+    const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+    const handleDragEnd = () => {
+        setDraggingIndex(null);
+    };
+    // Remove column from selected
+    const handleRemoveColumn = (col: ColumnKey) => {
+        setSelectedColumns(cols => cols.filter(c => c !== col));
+        setUnselectedColumns(cols => [...cols, col]);
+    };
+    // Add column from unselected
+    const handleAddColumn = (col: ColumnKey) => {
+        setUnselectedColumns(cols => cols.filter(c => c !== col));
+        setSelectedColumns(cols => [...cols, col]);
+    };
+    // Generate report
+    const handleGenerate = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+            const res = await fetch(`${apiBaseUrl}/api/get-report`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify({
+                    columns: selectedColumns,
+                    sort: sortOption,
+                    filterCategory,
+                    filterStatus
+                }),
+            });
+            if (!res.ok) throw new Error('Failed to generate report');
+            const blob = await res.blob();
+            // Download as CSV
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'transactions_report.csv';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            onClose();
+        } catch (e) {
+            alert('Failed to generate report.');
+            console.log(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+    // Reset columns when modal opens
+    React.useEffect(() => {
+        if (open) {
+            setSelectedColumns(allColumns.map(c => c.key));
+            setUnselectedColumns([]);
+            setSortOption('date-desc');
+            setFilterCategory('all');
+            setFilterStatus('all');
+        }
+    }, [open]);
+    if (!open) return null;
+    return (
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:'#1e293b',padding:32,borderRadius:12,minWidth:520,color:'#fff',boxShadow:'0 2px 16px #0008',display:'flex',flexDirection:'column',gap:16}}>
+        <h2 style={{marginBottom:8}}>Generate Report</h2>
+        <div style={{display:'flex',gap:24,alignItems:'flex-start'}}>
+          {/* Selected columns (horizontal, draggable) */}
+          <div style={{flex:1}}>
+            <div style={{marginBottom:8,fontWeight:600}}>Selected Columns (drag to reorder):</div>
+            <div style={{display:'flex',gap:8,overflowX:'auto',paddingBottom:8}}>
+              {selectedColumns.map((col, idx) => {
+                const colLabel = allColumns.find(c => c.key === col)?.label || col;
+                return (
+                  <div
+                    key={col}
+                    draggable
+                    onDragStart={() => handleDragStart(idx)}
+                    onDragOver={e => { e.preventDefault(); handleDragOver(idx); }}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      background:'#334155',
+                      padding:'8px 16px',
+                      borderRadius:6,
+                      cursor:'grab',
+                      opacity: draggingIndex === idx ? 0.5 : 1,
+                      border: '2px solid #64748b',
+                      display:'flex',
+                      alignItems:'center',
+                      gap:6
+                    }}
+                  >
+                    {colLabel}
+                    {selectedColumns.length > 1 && (
+                      <span style={{marginLeft:4,cursor:'pointer',color:'#f87171'}} onClick={() => handleRemoveColumn(col)} title="Remove">✕</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          {/* Unselected columns (vertical) */}
+          <div style={{minWidth:120}}>
+            <div style={{marginBottom:8,fontWeight:600}}>Unselected</div>
+            <div style={{display:'flex',flexDirection:'column',gap:8}}>
+              {unselectedColumns.length === 0 && <div style={{color:'#64748b',fontSize:13}}>None</div>}
+              {unselectedColumns.map(col => {
+                const colLabel = allColumns.find(c => c.key === col)?.label || col;
+                return (
+                  <div
+                    key={col}
+                    style={{background:'#334155',padding:'8px 12px',borderRadius:6,cursor:'pointer',border:'2px solid #64748b'}}
+                    onClick={() => handleAddColumn(col)}
+                    title="Add column"
+                  >
+                    {colLabel}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
-        <button onClick={handleGenerate} disabled={loading} style={{background:'#10b981',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer',marginRight:8}}>
-          {loading ? 'Generating...' : 'Generate Report'}
-        </button>
-        <button onClick={onClose} style={{background:'#334155',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        {/* Filter and sort options (reuse from main table) */}
+        <div style={{display:'flex',gap:16,margin:'16px 0'}}>
+          <div>
+            <div style={{fontWeight:600,marginBottom:4}}>Sort By</div>
+            <select value={sortOption} onChange={e => setSortOption(e.target.value)} style={{padding:6,borderRadius:4}}>
+              <option value="date-desc">Date (Newest)</option>
+              <option value="date-asc">Date (Oldest)</option>
+              <option value="amount-desc">Amount (High-Low)</option>
+              <option value="amount-asc">Amount (Low-High)</option>
+              <option value="user-asc">User (A-Z)</option>
+              <option value="user-desc">User (Z-A)</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontWeight:600,marginBottom:4}}>Category</div>
+            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{padding:6,borderRadius:4}}>
+              <option value="all">All</option>
+              <option value="revenue">Revenue</option>
+              <option value="expense">Expense</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontWeight:600,marginBottom:4}}>Status</div>
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{padding:6,borderRadius:4}}>
+              <option value="all">All</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+            </select>
+          </div>
+        </div>
+        <div style={{display:'flex',gap:12,marginTop:8}}>
+          <button onClick={handleGenerate} disabled={loading} style={{background:'#10b981',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer',marginRight:8}}>
+            {loading ? 'Generating...' : 'Generate Report'}
+          </button>
+          <button onClick={onClose} style={{background:'#334155',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+        </div>
       </div>
     </div>
   );
