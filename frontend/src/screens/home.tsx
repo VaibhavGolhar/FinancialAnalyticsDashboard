@@ -122,7 +122,8 @@ const Home: React.FC = () => {
         // Fetch user data
         const fetchUserData = async () => {
             try {
-                const response = await fetch('/api/auth/me', {
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+                const response = await fetch(`${apiBaseUrl}/api/auth/me`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
@@ -144,7 +145,8 @@ const Home: React.FC = () => {
 
         const fetchTransactions = async (token: string) => {
             try {
-                const response = await fetch('/api/get-transactions', {
+                const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+                const response = await fetch(`${apiBaseUrl}/api/get-transactions`, {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
