@@ -59,7 +59,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
 - **Request Body**:
   ```json
   {
-    "username": "example",,
+    "username": "example",
     "password": "password123"
   }
   ```
@@ -169,6 +169,53 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
       "message": "Token is not valid"
     }
     ```
+
+### Transaction Endpoints
+
+#### Get All Transactions
+
+- **URL**: `/api/transactions/get-transactions`
+- **Method**: `GET`
+- **Headers**:
+  - `Authorization`: `Bearer jwt_token`
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**:
+    ```json
+    [
+      {
+        "_id": "transaction_id",
+        "user": "user_id",
+        "amount": 100.5,
+        "type": "income",
+        "category": "Salary",
+        "date": "2024-06-28T00:00:00.000Z",
+        "description": "June Salary"
+      }
+    ]
+    ```
+
+#### Generate Transaction Report (PDF)
+
+- **URL**: `/api/transactions/get-report`
+- **Method**: `POST`
+- **Headers**:
+  - `Authorization`: `Bearer jwt_token`
+- **Request Body**:
+  ```json
+  {
+    "columns": ["date", "amount", "category", "user_id"],
+    "category":"revenue",
+    "status":"pending"
+  }
+  ```
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**: CSV file (Content-Type: application/csv)
+
+> **Note:**
+> - There are no endpoints for creating, updating, or deleting transactions in the current backend implementation.
+> - There is no analytics/summary endpoint in the current backend implementation.
 
 ## Project Structure
 
