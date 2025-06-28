@@ -29,10 +29,11 @@ const ReportModal: React.FC<{
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-        const selectedColumns = (Object.keys(columns) as (keyof typeof columns)[]).filter(
-            k => columns[k]
-        );
-      const res = await fetch('/api/get-report', {
+      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+      const selectedColumns = (Object.keys(columns) as (keyof typeof columns)[]).filter(
+        k => columns[k]
+      );
+      const res = await fetch(`${apiBaseUrl}/api/get-report`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -9,7 +9,8 @@ function App() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        fetch('/api/health')
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        fetch(`${apiBaseUrl}/api/health`)
             .then((res) => res.json())
             .then((data) => {
                 if (data.status === 'OK') {
