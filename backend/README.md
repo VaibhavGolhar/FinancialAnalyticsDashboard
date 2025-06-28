@@ -174,7 +174,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
 
 #### Get All Transactions
 
-- **URL**: `/api/transactions/get-transactions`
+- **URL**: `/api/get-transactions`
 - **Method**: `GET`
 - **Headers**:
   - `Authorization`: `Bearer jwt_token`
@@ -197,7 +197,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
 
 #### Generate Transaction Report (CSV)
 
-- **URL**: `/api/transactions/get-report`
+- **URL**: `/api/get-report`
 - **Method**: `POST`
 - **Headers**:
   - `Authorization`: `Bearer jwt_token`
