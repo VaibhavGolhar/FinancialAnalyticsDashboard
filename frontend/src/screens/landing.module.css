@@ -92,7 +92,7 @@
 .textButton {
     background: none;
     border: none;
-    color: #10b981; /* or any link-style color */
+    color: #10b981;
     padding: 0;
     font: inherit;
     cursor: pointer;
@@ -105,19 +105,17 @@
 
 /* Animation for password field */
 .slideIn {
-    animation: slideInAnimation 0.3s ease-out forwards;
-    transform-origin: top;
-    overflow: hidden;
+    animation: fadeIn 0.3s ease-out forwards;
 }
 
-@keyframes slideInAnimation {
-    0% {
+@keyframes fadeIn {
+    from {
         opacity: 0;
-        transform: translateY(-20px);
+        transform: scaleY(0.95);
     }
-    100% {
+    to {
         opacity: 1;
-        transform: translateY(0);
+        transform: scaleY(1);
     }
 }
 

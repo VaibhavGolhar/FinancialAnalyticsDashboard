@@ -14,7 +14,7 @@
 /* Sidebar */
 .sidebar {
     width: 200px;
-    background-color: #1e293b;
+    background: #1e293b;
     color: white;
     display: flex;
     flex-direction: column;
