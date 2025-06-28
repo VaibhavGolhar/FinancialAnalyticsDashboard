@@ -11,6 +11,9 @@ const Home: React.FC = () => {
     const transactionsPerPage = 10;
     const [chartView, setChartView] = useState<'Yearly' | 'Monthly'>('Yearly');
     const [selectedMonthYear, setSelectedMonthYear] = useState<string>('');
+    const [sortOption, setSortOption] = useState('date-desc');
+    const [filterCategory, setFilterCategory] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -77,11 +80,50 @@ const Home: React.FC = () => {
         navigate('/');
     };
 
-    // Pagination logic
-    const totalPages = Math.ceil(transactions.length / transactionsPerPage);
+    // Sorting logic
+    const sortTransactions = (txs: any[]) => {
+        const sorted = [...txs];
+        switch (sortOption) {
+            case 'date-asc':
+                sorted.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+                break;
+            case 'date-desc':
+                sorted.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                break;
+            case 'user-asc':
+                sorted.sort((a, b) => (a.user_id || '').localeCompare(b.user_id || ''));
+                break;
+            case 'user-desc':
+                sorted.sort((a, b) => (b.user_id || '').localeCompare(a.user_id || ''));
+                break;
+            case 'amount-asc':
+                sorted.sort((a, b) => a.amount - b.amount);
+                break;
+            case 'amount-desc':
+                sorted.sort((a, b) => b.amount - a.amount);
+                break;
+            default:
+                break;
+        }
+        return sorted;
+    };
+
+    // Filtering logic
+    const filterTransactions = (txs: any[]) => {
+        return txs.filter(t => {
+            const categoryMatch = filterCategory === 'all' || (t.category && t.category.toLowerCase() === filterCategory);
+            const statusMatch = filterStatus === 'all' || (t.status && t.status.toLowerCase() === filterStatus);
+            return categoryMatch && statusMatch;
+        });
+    };
+
+    // Apply filtering, then sorting, then pagination
+    const filteredTransactions = filterTransactions(transactions);
+    const sortedTransactions = sortTransactions(filteredTransactions);
+    const totalPages = Math.ceil(filteredTransactions.length / transactionsPerPage);
     const startIndex = (currentPage - 1) * transactionsPerPage;
     const endIndex = startIndex + transactionsPerPage;
-    const currentTransactions = transactions.slice(startIndex, endIndex);
+    const currentTransactions = sortedTransactions.slice(startIndex, endIndex);
 
     const handlePreviousPage = () => {
         setCurrentPage(prev => Math.max(prev - 1, 1));
@@ -278,7 +320,27 @@ const Home: React.FC = () => {
                         <h3 className={styles.chartTitle}>Transactions</h3>
                         <div className={styles.transactionsSearch}>
                             <input type="text" className={styles.searchInput} placeholder="Search for anything..." style={{width: '200px'}} />
-                            <div className={styles.dateFilter}>📅 Last 30 days</div>
+                        </div>
+                        <div style={{marginLeft: '16px', display: 'flex', gap: '8px', alignItems: 'center'}}>
+                            <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
+                                <option value="all">All Categories</option>
+                                <option value="expense">Expense</option>
+                                <option value="revenue">Revenue</option>
+                            </select>
+                            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
+                                <option value="all">All Statuses</option>
+                                <option value="paid">Paid</option>
+                                <option value="pending">Pending</option>
+                                <option value="failed">Failed</option>
+                            </select>
+                            <select value={sortOption} onChange={e => setSortOption(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
+                                <option value="date-desc">Date (Newest first)</option>
+                                <option value="date-asc">Date (Oldest first)</option>
+                                <option value="user-asc">User ID (Ascending)</option>
+                                <option value="user-desc">User ID (Descending)</option>
+                                <option value="amount-asc">Amount (Ascending)</option>
+                                <option value="amount-desc">Amount (Descending)</option>
+                            </select>
                         </div>
                     </div>
 
@@ -331,10 +393,10 @@ const Home: React.FC = () => {
                     </div>
 
                     {/* Pagination Controls */}
-                    {transactions.length > transactionsPerPage && (
+                    {filteredTransactions.length > transactionsPerPage && (
                         <div className={styles.paginationContainer}>
                             <div className={styles.paginationInfo}>
-                                Showing {startIndex + 1}-{Math.min(endIndex, transactions.length)} of {transactions.length} transactions
+                                Showing {filteredTransactions.length === 0 ? 0 : startIndex + 1}-{Math.min(endIndex, filteredTransactions.length)} of {filteredTransactions.length} transactions
                             </div>
                             <div className={styles.paginationControls}>
                                 <button

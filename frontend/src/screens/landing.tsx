@@ -66,7 +66,7 @@ const Landing: React.FC = () => {
             {/* Left Sidebar */}
             <div className={styles.sidebar}>
                 <div className={styles.sidebarContent}>
-                    <h1 className={styles.logo}>Financial Analytics Dashboard</h1>
+                    <h1 className={styles.logo}>FinSight</h1>
 
                     <div className={styles.inputContainer}>
                         <input
