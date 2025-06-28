@@ -3,6 +3,78 @@ import { useNavigate } from 'react-router-dom';
 import styles from './home.module.css';
 import OverviewChart from './OverviewChart';
 
+// Modal for report generation
+const ReportModal: React.FC<{
+  open: boolean;
+  onClose: () => void;
+}> = ({ open, onClose }) => {
+  const [columns, setColumns] = useState({
+    date: true,
+    amount: true,
+    category: true,
+    status: true,
+    user_id: true,
+  });
+  const [loading, setLoading] = useState(false);
+
+  const handleCheckbox = (col: string) => {
+    setColumns(prev => ({ ...prev, [col]: !prev[col] }));
+  };
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const selectedColumns = Object.keys(columns).filter(k => columns[k]);
+      const res = await fetch('/api/get-report', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ columns: selectedColumns }),
+      });
+      if (!res.ok) throw new Error('Failed to generate report');
+      const blob = await res.blob();
+      // Download as CSV
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'transactions_report.csv';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      onClose();
+    } catch (e) {
+      alert('Failed to generate report.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!open) return null;
+  return (
+    <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.4)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{background:'#1e293b',padding:32,borderRadius:12,minWidth:320,color:'#fff',boxShadow:'0 2px 16px #0008'}}>
+        <h2 style={{marginBottom:16}}>Generate Report</h2>
+        <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:24}}>
+          {Object.keys(columns).map(col => (
+            <label key={col} style={{display:'flex',alignItems:'center',gap:8}}>
+              <input type="checkbox" checked={columns[col]} onChange={() => handleCheckbox(col)} />
+              {col.charAt(0).toUpperCase() + col.slice(1)}
+            </label>
+          ))}
+        </div>
+        <button onClick={handleGenerate} disabled={loading} style={{background:'#10b981',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer',marginRight:8}}>
+          {loading ? 'Generating...' : 'Generate Report'}
+        </button>
+        <button onClick={onClose} style={{background:'#334155',color:'#fff',padding:'8px 20px',border:'none',borderRadius:6,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+      </div>
+    </div>
+  );
+};
+
 const Home: React.FC = () => {
     const [user, setUser] = useState<any>(null);
     const [transactions, setTransactions] = useState<any[]>([]);
@@ -15,6 +87,7 @@ const Home: React.FC = () => {
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [reportModalOpen, setReportModalOpen] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -205,7 +278,7 @@ const Home: React.FC = () => {
                     <span>Dashboard</span>
                 </div>
 
-                <div className={styles.navItem}>
+                <div className={styles.navItem} onClick={() => setReportModalOpen(true)}>
                     <div className={styles.navIcon}>📊</div>
                     <span>Report</span>
                 </div>
@@ -218,6 +291,9 @@ const Home: React.FC = () => {
 
             {/* Main Content */}
             <div className={styles.mainContent}>
+                {/* Report Modal */}
+                <ReportModal open={reportModalOpen} onClose={() => setReportModalOpen(false)} />
+
                 {/* Header */}
                 <div className={styles.header}>
                     <h1 className={styles.pageTitle}>Dashboard</h1>

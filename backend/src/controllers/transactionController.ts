@@ -1,7 +1,6 @@
 import { Request, Response } from 'express';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/authMiddleware';
-import PDFDocument from 'pdfkit';
 import { logInfo, logError } from '../utils/logger';
 
 // Get transactions for the current user
@@ -36,12 +35,12 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
   }
 };
 
-// Generate PDF report with selected columns
+// Generate CSV report with selected columns
 export const getTransactionReport = async (req: AuthRequest, res: Response): Promise<void> => {
-  logInfo('Function called: getTransactionReport', { userId: req.user?.id });
+  logInfo('Function called: getTransactionReport', { userId: req.user?.userId });
   try {
     // Get user ID from the authenticated request
-    const userId = req.user?.id;
+    const userId = req.user?.userId;
 
     if (!userId) {
       res.status(401).json({ message: 'User not authenticated' });
@@ -72,7 +71,7 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
     }
 
     // Fetch transactions for the user
-    const transactions = await Transaction.find({ user_id: userId })
+    const transactions = await Transaction.find({ })
       .sort({ date: -1 }) // Sort by date descending (newest first)
       .exec();
 
@@ -84,94 +83,33 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
       return;
     }
 
-    // Create a PDF document
-    const doc = new PDFDocument({ margin: 50 });
-
-    // Set response headers for PDF download
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'attachment; filename=transaction-report.pdf');
-
-    // Pipe the PDF to the response
-    doc.pipe(res);
-
-    // Add title to the PDF
-    doc.fontSize(20).text('Transaction Report', { align: 'center' });
-    doc.moveDown();
-
-    // Define table layout
-    const tableTop = 150;
-    const columnSpacing = 20;
-    let columnPositions: number[] = [];
-    let columnWidths: number[] = [];
-
-    // Calculate column positions and widths based on selected columns
-    const pageWidth = doc.page.width - 100; // Margins on both sides
-    const columnWidth = pageWidth / columns.length;
-
-    columns.forEach((col, i) => {
-      columnPositions[i] = 50 + (i * columnWidth);
-      columnWidths[i] = columnWidth - columnSpacing;
-    });
-
-    // Draw table headers
-    doc.fontSize(12);
-    doc.font('Helvetica-Bold');
-
-    columns.forEach((col, i) => {
-      doc.text(col.charAt(0).toUpperCase() + col.slice(1), columnPositions[i], tableTop);
-    });
-
-    // Draw horizontal line below headers
-    doc.moveTo(50, tableTop + 20)
-       .lineTo(doc.page.width - 50, tableTop + 20)
-       .stroke();
-
-    // Draw table rows
-    doc.font('Helvetica');
-    let rowTop = tableTop + 30;
-
-    transactions.forEach((transaction, rowIndex) => {
-      // Check if we need a new page
-      if (rowTop > doc.page.height - 50) {
-        doc.addPage();
-        rowTop = 50;
-
-        // Redraw headers on new page
-        doc.font('Helvetica-Bold');
-        columns.forEach((col, i) => {
-          doc.text(col.charAt(0).toUpperCase() + col.slice(1), columnPositions[i], rowTop);
-        });
-
-        doc.moveTo(50, rowTop + 20)
-           .lineTo(doc.page.width - 50, rowTop + 20)
-           .stroke();
-
-        doc.font('Helvetica');
-        rowTop += 30;
-      }
-
-      // Draw row data
-      columns.forEach((col, i) => {
-        let value = transaction[col as keyof typeof transaction];
-
+    // Create a CSV instead of PDF
+    const csvRows = [];
+    // Add header row, with special label for amount
+    const headerRow = columns.map(col => col === 'amount' ? 'Amount (in $)' : col);
+    csvRows.push(headerRow.join(','));
+    // Add data rows
+    for (const tx of transactions) {
+      const row = columns.map(col => {
+        let val = tx[col as keyof typeof tx];
         // Format date values
         if (col === 'createdAt' || col === 'updatedAt') {
-          value = new Date(value as string).toLocaleDateString();
+          val = new Date(val as string).toLocaleDateString();
         }
-
-        // Format amount values
+        // Format amount values: just the number
         if (col === 'amount') {
-          value = `$${(value as number).toFixed(2)}`;
+          val = typeof val === 'number' ? val : Number(val);
         }
-
-        doc.text(String(value), columnPositions[i], rowTop);
+        if (val === undefined || val === null) return '';
+        return String(val).replace(/,/g, ''); // Remove commas to avoid CSV issues
       });
-
-      rowTop += 20;
-    });
-
-    // Finalize the PDF
-    doc.end();
+      csvRows.push(row.join(','));
+    }
+    const csvContent = csvRows.join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="transactions_report.csv"');
+    res.send(csvContent);
+    return;
 
     logInfo('getTransactionReport output', { columns, transactionCount: transactions.length, userId });
   } catch (error) {
