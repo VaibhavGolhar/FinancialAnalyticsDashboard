@@ -8,6 +8,7 @@
     position: fixed;
     top: 0;
     left: 0;
+    flex-direction: row-reverse;
 }
 
 /* Sidebar */
@@ -17,11 +18,13 @@
     color: white;
     display: flex;
     flex-direction: column;
-    justify-content: space-between;
 }
 
 .sidebarContent {
     padding: 32px;
+    display: flex;
+    flex-direction: column;
+
 }
 
 .logo {

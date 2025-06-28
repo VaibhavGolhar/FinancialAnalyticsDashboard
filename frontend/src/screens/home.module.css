@@ -24,9 +24,9 @@
 }
 
 .logo {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: bold;
-    color: #10b981;
+    color: white;
     margin: 20px 24px 40px 24px;
     display: flex;
     align-items: center;
@@ -35,9 +35,6 @@
 
 .logo::before {
     content: "🪙";
-    background: linear-gradient(45deg, #fbbf24, #10b981);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
     font-size: 28px;
 }
 
@@ -69,6 +66,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    color: #10b981;
 }
 
 /* Main Content */
@@ -89,9 +87,9 @@
 }
 
 .page-title {
-    font-size: 32px;
+    font-size: 20px;
     font-weight: bold;
-    color: white;
+    color: ghostwhite;
 }
 
 .search-container {

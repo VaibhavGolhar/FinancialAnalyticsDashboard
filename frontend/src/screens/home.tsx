@@ -310,7 +310,7 @@ const Home: React.FC = () => {
 
                 {/* Header */}
                 <div className={styles.header}>
-                    <h1 className={styles.pageTitle}>Dashboard</h1>
+                    <h2 className={styles.pageTitle}>Dashboard</h2>
                     <div className={styles.searchContainer}>
                         <div className={styles.userAvatar}>
                             {'A'}
@@ -365,6 +365,7 @@ const Home: React.FC = () => {
                         </div>
                         <div className={styles.statValue}>
                             ${savings.toFixed(2)}
+                            <div style={{fontSize:'13px',color:'#94a3b8',marginTop:2}}>Includes pending payments</div>
                         </div>
                     </div>
                 </div>

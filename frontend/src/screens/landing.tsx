@@ -123,10 +123,15 @@ const Landing: React.FC = () => {
                         )}
                     </div>
 
-                    <div className={styles.sidebarFooter}>
-                        <button className={styles.textButton}>Don't have an account? Create one here.</button>
-                    </div>
+                </div>
 
+                <div className={styles.bottomBar}>
+                    <div className={styles.curatedBy}>
+                        <span>created by</span>
+                        <div className={styles.logoContainer}>
+                            <span className={styles.createdText}>Vaibhav Golhar</span>
+                        </div>
+                    </div>
                 </div>
 
             </div>
@@ -188,14 +193,7 @@ const Landing: React.FC = () => {
                 </div>
 
                 {/* Bottom Bar */}
-                <div className={styles.bottomBar}>
-                    <div className={styles.curatedBy}>
-                        <span>created by</span>
-                        <div className={styles.logoContainer}>
-                            <span className={styles.createdText}>Vaibhav Golhar</span>
-                        </div>
-                    </div>
-                </div>
+
             </div>
         </div>
     );
