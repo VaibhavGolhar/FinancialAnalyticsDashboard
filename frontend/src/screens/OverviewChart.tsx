@@ -24,7 +24,11 @@ ChartJS.register(
 );
 
 interface OverviewChartProps {
-  transactions: never[];
+  transactions: any[];
+  view: 'Yearly' | 'Monthly';
+  selectedMonthYear?: string;
+  monthYearOptions?: string[];
+  onMonthYearChange?: (monthYear: string) => void;
 }
 
 function getMonthlyData(transactions: any[]) {
@@ -59,44 +63,114 @@ function getMonthlyData(transactions: any[]) {
   };
 }
 
-const OverviewChart: React.FC<OverviewChartProps> = ({ transactions }) => {
-  const { labels, revenue, expenses } = getMonthlyData(transactions);
+function getDailyData(transactions: any[], monthYear: string) {
+  const dailyRevenue: { [key: string]: number } = {};
+  const dailyExpenses: { [key: string]: number } = {};
+  transactions.forEach(t => {
+    const date = new Date(t.date);
+    const month = date.toLocaleString('default', { month: 'short' });
+    const year = date.getFullYear();
+    const key = `${month} ${year}`;
+    if (key !== monthYear) return;
+    const day = date.getDate();
+    const dayKey = `${day.toString().padStart(2, '0')}`;
+    if (t.category && t.category.toLowerCase() === 'revenue') {
+      dailyRevenue[dayKey] = (dailyRevenue[dayKey] || 0) + Math.abs(t.amount);
+    } else if (t.category && t.category.toLowerCase() === 'expense') {
+      dailyExpenses[dayKey] = (dailyExpenses[dayKey] || 0) + Math.abs(t.amount);
+    }
+  });
+  // Find number of days in the selected month
+  const [monthStr, yearStr] = monthYear.split(' ');
+  const monthIdx = new Date(`${monthStr} 1, ${yearStr}`).getMonth();
+  const yearNum = parseInt(yearStr, 10);
+  const daysInMonth = new Date(yearNum, monthIdx + 1, 0).getDate();
+  const dayLabels = Array.from({length: daysInMonth}, (_, i) => (i+1).toString().padStart(2, '0'));
+  return {
+    labels: dayLabels,
+    revenue: dayLabels.map(k => dailyRevenue[k] || 0),
+    expenses: dayLabels.map(k => dailyExpenses[k] || 0),
+  };
+}
+
+const OverviewChart: React.FC<OverviewChartProps> = ({ transactions, view, selectedMonthYear, monthYearOptions, onMonthYearChange }) => {
+  let chartData, labels, revenue, expenses;
+  if (view === 'Monthly' && selectedMonthYear) {
+    const daily = getDailyData(transactions, selectedMonthYear);
+    labels = daily.labels;
+    revenue = daily.revenue;
+    expenses = daily.expenses;
+    chartData = {
+      labels,
+      datasets: [
+        {
+          label: 'Income',
+          data: revenue,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.2)',
+          tension: 0.4,
+          fill: false,
+          pointBackgroundColor: '#10b981',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Expenses',
+          data: expenses,
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.2)',
+          tension: 0.4,
+          fill: false,
+          pointBackgroundColor: '#fbbf24',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+      ],
+    };
+  } else {
+    const monthly = getMonthlyData(transactions);
+    labels = monthly.labels;
+    revenue = monthly.revenue;
+    expenses = monthly.expenses;
+    chartData = {
+      labels: labels.map(l => l.split(' ')[0]),
+      datasets: [
+        {
+          label: 'Income',
+          data: revenue,
+          borderColor: '#10b981',
+          backgroundColor: 'rgba(16,185,129,0.2)',
+          tension: 0.4,
+          fill: false,
+          pointBackgroundColor: '#10b981',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+        {
+          label: 'Expenses',
+          data: expenses,
+          borderColor: '#fbbf24',
+          backgroundColor: 'rgba(251,191,36,0.2)',
+          tension: 0.4,
+          fill: false,
+          pointBackgroundColor: '#fbbf24',
+          pointBorderColor: '#fff',
+          pointRadius: 5,
+          pointHoverRadius: 7,
+        },
+      ],
+    };
+  }
   const chartRef = useRef<any>(null);
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
   // Extract year from last label (or current year if none)
-  const year = labels.length > 0 ? labels[labels.length - 1].split(' ')[1] : new Date().getFullYear();
-  const monthLabels = labels.map(l => l.split(' ')[0]);
-
-  const chartData = {
-    labels,
-    datasets: [
-      {
-        label: 'Income',
-        data: revenue,
-        borderColor: '#10b981',
-        backgroundColor: 'rgba(16,185,129,0.2)',
-        tension: 0.4,
-        fill: false,
-        pointBackgroundColor: '#10b981',
-        pointBorderColor: '#fff',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-      },
-      {
-        label: 'Expenses',
-        data: expenses,
-        borderColor: '#fbbf24',
-        backgroundColor: 'rgba(251,191,36,0.2)',
-        tension: 0.4,
-        fill: false,
-        pointBackgroundColor: '#fbbf24',
-        pointBorderColor: '#fff',
-        pointRadius: 5,
-        pointHoverRadius: 7,
-      },
-    ],
-  };
+  const year = (view === 'Monthly' && selectedMonthYear)
+    ? selectedMonthYear.split(' ')[1]
+    : (labels && labels.length > 0 ? labels[labels.length - 1].split(' ')[1] : new Date().getFullYear());
 
   const options = {
     responsive: true,
@@ -144,7 +218,7 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions }) => {
       x: {
         ticks: {
           color: '#fff',
-          autoSkip: false, // Show all months
+          autoSkip: false, // Show all
           maxRotation: 0,
           minRotation: 0,
         },
@@ -168,22 +242,40 @@ const OverviewChart: React.FC<OverviewChartProps> = ({ transactions }) => {
         marginBottom: 8,
         display: 'inline-block',
       }}>
-        <strong>{labels[hoverIndex]}</strong>:&nbsp;
+        <strong>{view === 'Monthly' ? `${selectedMonthYear} ${labels[hoverIndex]}` : labels[hoverIndex]}</strong>:&nbsp;
         Income: <span style={{ color: '#10b981' }}>${revenue[hoverIndex].toFixed(2)}</span>
         &nbsp;|&nbsp;
         Expenses: <span style={{ color: '#fbbf24' }}>${expenses[hoverIndex].toFixed(2)}</span>
       </div>
   ) : null;
 
-  // Responsive width: fit parent, min 700px, max 100% (no horizontal scroll)
+  // Hide hoverDisplay when mouse leaves chart area
+  const handleMouseLeave = () => setHoverIndex(null);
+
   return (
     <div style={{height: '80%', width: '100%', paddingBottom: 0, position: 'relative'}}>
-      {/* Year display at top right */}
+      {/* Year display at top right, month dropdown at left if Monthly */}
       <div style={{position: 'absolute', top: 0, right: 0, color: '#fff', fontWeight: 600, fontSize: 18, zIndex: 2, padding: '8px 16px'}}>
         {year}
       </div>
+      {view === 'Monthly' && monthYearOptions && onMonthYearChange && (
+        <div style={{position: 'absolute', top: 0, left: 0, zIndex: 2, padding: '8px 16px'}}>
+          <select
+            style={{background: '#334155', border: '1px solid #475569', color: 'white', padding: '4px 8px', borderRadius: '4px'}}
+            value={selectedMonthYear}
+            onChange={e => onMonthYearChange(e.target.value)}
+          >
+            {monthYearOptions.map(opt => (
+              <option key={opt} value={opt}>{opt}</option>
+            ))}
+          </select>
+        </div>
+      )}
+      {/* Only show hoverDisplay if inside chart area */}
       {hoverDisplay}
-      <Line ref={chartRef} data={{...chartData, labels: monthLabels}} options={options} />
+      <div onMouseLeave={handleMouseLeave}>
+        <Line ref={chartRef} data={chartData} options={options} />
+      </div>
     </div>
   );
 };

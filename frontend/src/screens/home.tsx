@@ -9,6 +9,8 @@ const Home: React.FC = () => {
     const [loading, setLoading] = useState(true);
     const [currentPage, setCurrentPage] = useState(1);
     const transactionsPerPage = 10;
+    const [chartView, setChartView] = useState<'Yearly' | 'Monthly'>('Yearly');
+    const [selectedMonthYear, setSelectedMonthYear] = useState<string>('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -107,6 +109,27 @@ const Home: React.FC = () => {
     const totalRevenue = transactions.filter(t => t.category && t.category.toLowerCase() === 'revenue').reduce((total, t) => total + Math.abs(t.amount), 0);
     const totalExpenses = transactions.filter(t => t.category && t.category.toLowerCase() === 'expense').reduce((total, t) => total + Math.abs(t.amount), 0);
 
+    // Extract all unique month-year keys from transactions for dropdown
+    const monthYearOptions = Array.from(new Set(transactions.map(t => {
+        const date = new Date(t.date);
+        const month = date.toLocaleString('default', { month: 'short' });
+        const year = date.getFullYear();
+        return `${month} ${year}`;
+    })));
+    monthYearOptions.sort((a, b) => {
+        const [ma, ya] = a.split(' ');
+        const [mb, yb] = b.split(' ');
+        const da = new Date(`${ma} 1, ${ya}`);
+        const db = new Date(`${mb} 1, ${yb}`);
+        return da.getTime() - db.getTime();
+    });
+    // Set default selected month to latest if not set
+    React.useEffect(() => {
+        if (chartView === 'Monthly' && !selectedMonthYear && monthYearOptions.length > 0) {
+            setSelectedMonthYear(monthYearOptions[monthYearOptions.length - 1]);
+        }
+    }, [chartView, monthYearOptions, selectedMonthYear]);
+
     if (loading) {
         return <div className={styles.loadingContainer}>Loading...</div>;
     }
@@ -123,28 +146,8 @@ const Home: React.FC = () => {
                 </div>
 
                 <div className={styles.navItem}>
-                    <div className={styles.navIcon}>⟷</div>
-                    <span>Transactions</span>
-                </div>
-
-                <div className={styles.navItem}>
-                    <div className={styles.navIcon}>👤</div>
-                    <span>Wallet</span>
-                </div>
-
-                <div className={styles.navItem}>
                     <div className={styles.navIcon}>📊</div>
-                    <span>Analytics</span>
-                </div>
-
-                <div className={styles.navItem}>
-                    <div className={styles.navIcon}>👤</div>
-                    <span>Personal</span>
-                </div>
-
-                <div className={styles.navItem}>
-                    <div className={styles.navIcon}>✉</div>
-                    <span>Message</span>
+                    <span>Report</span>
                 </div>
 
                 <div className={styles.navItem} onClick={handleLogout}>
@@ -159,9 +162,8 @@ const Home: React.FC = () => {
                 <div className={styles.header}>
                     <h1 className={styles.pageTitle}>Dashboard</h1>
                     <div className={styles.searchContainer}>
-                        <input type="text" className={styles.searchInput} placeholder="Search..." />
                         <div className={styles.userAvatar}>
-                            {user?.name ? user.name.charAt(0).toUpperCase() : 'U'}
+                            {'A'}
                         </div>
                     </div>
                 </div>
@@ -223,30 +225,40 @@ const Home: React.FC = () => {
                                     <div style={{width: '12px', height: '12px', background: '#fbbf24', borderRadius: '50%'}}></div>
                                     <span style={{color: '#94a3b8', fontSize: '14px'}}>Expenses</span>
                                 </div>
-                                <select style={{background: '#334155', border: '1px solid #475569', color: 'white', padding: '4px 8px', borderRadius: '4px'}}>
-                                    <option>Monthly</option>
+                                <select
+                                    style={{background: '#334155', border: '1px solid #475569', color: 'white', padding: '4px 8px', borderRadius: '4px'}}
+                                    value={chartView}
+                                    onChange={e => setChartView(e.target.value as 'Yearly' | 'Monthly')}
+                                >
+                                    <option value="Yearly">Yearly</option>
+                                    <option value="Monthly">Monthly</option>
                                 </select>
                             </div>
                         </div>
                         <div className={styles.chartContainer}>
-                            <OverviewChart transactions={transactions} />
+                            <OverviewChart
+                                transactions={transactions}
+                                view={chartView}
+                                selectedMonthYear={chartView === 'Monthly' ? selectedMonthYear : undefined}
+                                monthYearOptions={monthYearOptions}
+                                onMonthYearChange={setSelectedMonthYear}
+                            />
                         </div>
                     </div>
 
                     <div className={styles.recentTransactions}>
                         <div className={styles.transactionsHeader}>
-                            <h3 className={styles.chartTitle}>Recent Transaction</h3>
-                            <a href="#" className={styles.seeAllLink}>See all</a>
+                            <h3 className={styles.chartTitle}>Recent Transactions</h3>
                         </div>
 
                         {transactions.slice(0, 3).map((transaction, index) => (
                             <div key={index} className={styles.transactionItem}>
                                 <div className={styles.transactionAvatar}>
-                                    {transaction.recipient_name ? transaction.recipient_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
+                                    {transaction.user_id ? parseInt(transaction.user_id.split('_')[1], 10) : 'U'}
                                 </div>
                                 <div className={styles.transactionDetails}>
                                     <div className={styles.transactionName}>
-                                        {transaction.recipient_name || 'Unknown'}
+                                        {transaction.user_id || 'Unknown'}
                                     </div>
                                     <div className={styles.transactionType}>
                                         {transaction.category && transaction.category.toLowerCase() === 'revenue' ? 'Transfers from' : 'Transfers to'}
@@ -282,10 +294,10 @@ const Home: React.FC = () => {
                             <div key={startIndex + index} className={styles.tableRow}>
                                 <div className={styles.tableName}>
                                     <div className={styles.tableAvatar}>
-                                        {transaction.recipient_name ? transaction.recipient_name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
+                                        {transaction.user_id ? parseInt(transaction.user_id.split('_')[1], 10) : 'U'}
                                     </div>
                                     <span style={{color: 'white'}}>
-                                        {transaction.recipient_name || 'Unknown'}
+                                        {transaction.user_id || 'Unknown'}
                                     </span>
                                 </div>
                                 <div style={{color: '#94a3b8'}}>
