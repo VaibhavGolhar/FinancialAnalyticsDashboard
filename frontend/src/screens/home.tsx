@@ -238,9 +238,23 @@ const Home: React.FC = () => {
     };
 
     // Updated calculations using category (case-insensitive)
-    const balance = transactions.reduce((total, t) => total + getSignedAmount(t), 0);
+    // BALANCE: only paid revenues - only paid expenses
+    const balance = transactions.reduce((total, t) => {
+        if (!t.status || t.status.toLowerCase() !== 'paid') return total;
+        if (t.category && t.category.toLowerCase() === 'revenue') return total + Math.abs(t.amount);
+        if (t.category && t.category.toLowerCase() === 'expense') return total - Math.abs(t.amount);
+        return total;
+    }, 0);
+    // SAVINGS: all revenue - all expenses (regardless of status)
     const totalRevenue = transactions.filter(t => t.category && t.category.toLowerCase() === 'revenue').reduce((total, t) => total + Math.abs(t.amount), 0);
     const totalExpenses = transactions.filter(t => t.category && t.category.toLowerCase() === 'expense').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const savings = totalRevenue - totalExpenses;
+
+    // Revenue/Expense breakdowns
+    const paidRevenue = transactions.filter(t => t.category && t.category.toLowerCase() === 'revenue' && t.status && t.status.toLowerCase() === 'paid').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const pendingRevenue = transactions.filter(t => t.category && t.category.toLowerCase() === 'revenue' && t.status && t.status.toLowerCase() === 'pending').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const paidExpenses = transactions.filter(t => t.category && t.category.toLowerCase() === 'expense' && t.status && t.status.toLowerCase() === 'paid').reduce((total, t) => total + Math.abs(t.amount), 0);
+    const pendingExpenses = transactions.filter(t => t.category && t.category.toLowerCase() === 'expense' && t.status && t.status.toLowerCase() === 'pending').reduce((total, t) => total + Math.abs(t.amount), 0);
 
     // Extract all unique month-year keys from transactions for dropdown
     const monthYearOptions = Array.from(new Set(transactions.map(t => {
@@ -309,7 +323,7 @@ const Home: React.FC = () => {
                     <div className={styles.statCard}>
                         <div className={styles.statHeader}>
                             <div className={`${styles.statIcon} ${styles.balance}`}>💳</div>
-                            <div className={styles.statLabel}>Balance</div>
+                            <div className={styles.statLabel}>Current Balance</div>
                         </div>
                         <div className={styles.statValue}>
                             ${balance.toFixed(2)}
@@ -323,6 +337,10 @@ const Home: React.FC = () => {
                         </div>
                         <div className={styles.statValue}>
                             ${totalRevenue.toFixed(2)}
+                            <div style={{fontSize:'13px',color:'#94a3b8',marginTop:2}}>
+                                Paid: <span style={{color:'#10b981'}}>${paidRevenue.toFixed(2)}</span> &nbsp;|
+                                Pending: <span style={{color:'#fbbf24'}}>${pendingRevenue.toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -333,16 +351,20 @@ const Home: React.FC = () => {
                         </div>
                         <div className={styles.statValue}>
                             ${totalExpenses.toFixed(2)}
+                            <div style={{fontSize:'13px',color:'#94a3b8',marginTop:2}}>
+                                Paid: <span style={{color:'#10b981'}}>${paidExpenses.toFixed(2)}</span> &nbsp;|
+                                Pending: <span style={{color:'#fbbf24'}}>${pendingExpenses.toFixed(2)}</span>
+                            </div>
                         </div>
                     </div>
 
                     <div className={styles.statCard}>
                         <div className={styles.statHeader}>
                             <div className={`${styles.statIcon} ${styles.savings}`}>💰</div>
-                            <div className={styles.statLabel}>Savings</div>
+                            <div className={styles.statLabel}>Estimated Savings</div>
                         </div>
                         <div className={styles.statValue}>
-                            ${(balance * 0.1).toFixed(2)}
+                            ${savings.toFixed(2)}
                         </div>
                     </div>
                 </div>
@@ -412,20 +434,20 @@ const Home: React.FC = () => {
                 <div className={styles.transactionsSection}>
                     <div className={styles.transactionsTableHeader}>
                         <h3 className={styles.chartTitle}>Transactions</h3>
-                        <div className={styles.transactionsSearch}>
-                            <input
-                                type="text"
-                                className={styles.searchInput}
-                                placeholder="Search for anything..."
-                                style={{width: '200px'}}
-                                value={searchTerm}
-                                onChange={e => {
-                                    setSearchTerm(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                            />
-                        </div>
-                        <div style={{marginLeft: '16px', display: 'flex', gap: '8px', alignItems: 'center'}}>
+                        <div style={{display: 'flex', flex: 1, justifyContent: 'flex-end', alignItems: 'center', gap: '8px'}}>
+                            <div className={styles.transactionsSearch}>
+                                <input
+                                    type="text"
+                                    className={styles.searchInput}
+                                    placeholder="Search for anything..."
+                                    style={{width: '200px'}}
+                                    value={searchTerm}
+                                    onChange={e => {
+                                        setSearchTerm(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                            </div>
                             <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
                                 <option value="all">All Categories</option>
                                 <option value="expense">Expense</option>
@@ -450,7 +472,7 @@ const Home: React.FC = () => {
 
                     <div className={styles.transactionsTable}>
                         <div className={styles.tableHeader}>
-                            <div>Name</div>
+                            <div style={{textAlign: 'left'}}>Name</div>
                             <div>Date</div>
                             <div>Amount</div>
                             <div>Status</div>
