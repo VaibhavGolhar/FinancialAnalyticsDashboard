@@ -16,7 +16,7 @@ This monorepo contains two main components:
 >**NOTE**: Each subdirectory contains its own `README.md` file with setup instructions, tech stack, and detailed usage.
 >
 >**NOTE**: The website is live on the link: `https://finsight-okf9.onrender.com` and the only registered user credentials are
->username = `admin` and password = `admin@123`.
+>username = `admin` and password = `admin@123`. It may take some time when connecting to the website as it was deployed using free render account. But once it gets connected it will work just fine.
 
 ---
 
