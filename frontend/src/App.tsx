@@ -36,11 +36,16 @@ function App() {
     };
 
     if (!isHealthy) {
-        return <div>
-            {error || 'This project was deployed on render using a free account, so with inactivity the request time may increase alot.'}
-            <br />
-            {If the request does not fulfill in 1 min please contact me so that I can redeploy it.}
-        </div>;
+    return (
+        <div>
+            <p>
+                {error || 'This project was deployed on Render using a free account, so with inactivity the request time may increase a lot.'}
+            </p>
+            <p>
+                If the request does not fulfill in 1 min, please contact me so that I can redeploy it.
+            </p>
+        </div>
+        );
     }
 
     return (
