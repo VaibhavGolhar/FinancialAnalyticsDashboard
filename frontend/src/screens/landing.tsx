@@ -94,7 +94,7 @@ const Landing: React.FC = () => {
                 setRegisterSuccess('Account created! You can now log in.');
                 setTimeout(() => setShowRegister(false), 1200);
             } else {
-                setRegisterError(data.message || 'Registration failed.');
+                setRegisterError(data.message || 'Password should be at least 8 characters long and contain at least one uppercase letter, one lowercase letter, one number, and one special character.');
             }
         } catch (err) {
             setRegisterError('Network error. Please try again.');
