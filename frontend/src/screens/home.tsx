@@ -536,6 +536,7 @@ const Home: React.FC = () => {
             fetchTransactions();
           } else {
             setError(data.message || 'Failed to save transaction');
+            console.log(error);
           }
         } catch {
           setError('Failed to save transaction');
@@ -825,7 +826,7 @@ const Home: React.FC = () => {
                                     <button
                                         className={styles.textButton}
                                         title="Delete"
-                                        onClick={() => setDeleteId(transaction.id)}
+                                        onClick={() => setDeleteId(transaction.id.toString())}
                                         style={{color: '#f87171'}}
                                     >
                                         Delete
