@@ -32,7 +32,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
    PORT=3000
 
    # Database configuration
-   MONGODB_URI=mongodb://localhost:27017/financial_dashboard
+   MONGODB_URI=<your_mongodb_url_here>
 
    # JWT configuration
    # The application will automatically generate a secure JWT secret if this default value is used
@@ -41,7 +41,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
    # JWT token expiration time (examples: 60, "2 days", "10h", "7d")
    JWT_EXPIRES_IN=1d
    ```
-
+   > **NOTE**: Make sure that mongodb url points to the correct database containing collections transactions and users.
    > **NOTE**: You don't need to manually generate a JWT secret. The application will automatically generate a secure random secret and update the .env file if the default value is used. See the [JWT Security](#jwt-security) section for more details.
 5. Start the development server:
    ```
@@ -60,7 +60,6 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
   ```json
   {
     "username": "example",
-    "email": "example@example.com",
     "password": "password123"
   }
   ```
@@ -73,7 +72,6 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
       "user": {
         "id": "user_id",
         "username": "example",
-        "email": "example@example.com",
         "createdAt": "timestamp"
       },
       "token": "jwt_token"
@@ -98,7 +96,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
   - **Content**:
     ```json
     {
-      "message": "User already exists with that email or username"
+      "message": "User already exists with that username"
     }
     ```
 
@@ -109,7 +107,7 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
 - **Request Body**:
   ```json
   {
-    "email": "example@example.com",
+    "username": "username",
     "password": "password123"
   }
   ```
@@ -122,7 +120,6 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
       "user": {
         "id": "user_id",
         "username": "example",
-        "email": "example@example.com",
         "createdAt": "timestamp"
       },
       "token": "jwt_token"
@@ -151,7 +148,6 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
       "user": {
         "_id": "user_id",
         "username": "example",
-        "email": "example@example.com",
         "createdAt": "timestamp",
         "updatedAt": "timestamp"
       }
@@ -174,6 +170,54 @@ This is the backend API for the Financial Analytics Dashboard application. It pr
     }
     ```
 
+### Transaction Endpoints
+
+#### Get All Transactions
+
+- **URL**: `/api/transactions/get-transactions`
+- **Method**: `GET`
+- **Headers**:
+  - `Authorization`: `Bearer jwt_token`
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**:
+    ```json
+    [
+      {
+        "_id": "transaction_id",
+        "user": "user_id",
+        "amount": 100.5,
+        "type": "income",
+        "category": "Salary",
+        "date": "2024-06-28T00:00:00.000Z",
+        "description": "June Salary"
+      }
+    ]
+    ```
+
+#### Generate Transaction Report (PDF)
+
+- **URL**: `/api/transactions/get-report`
+- **Method**: `POST`
+- **Headers**:
+  - `Authorization`: `Bearer jwt_token`
+- **Request Body**:
+  ```json
+  {
+    "columns": ["date", "amount", "category", "type"],
+    "filters": {
+      "type": "income"
+    }
+  }
+  ```
+- **Success Response**:
+  - **Code**: 200 OK
+  - **Content**: PDF file (Content-Type: application/pdf)
+
+> **Note:**
+> - There are no endpoints for creating, updating, or deleting transactions in the current backend implementation.
+> - There is no analytics/summary endpoint in the current backend implementation.
+
 ## Project Structure
 
 ```
@@ -184,6 +228,7 @@ backend/
 │   ├── middleware/     # Custom middleware
 │   ├── models/         # Mongoose models
 │   ├── routes/         # Express routes
+|   |── utils/
 │   └── index.ts        # Entry point
 ├── .env                # Environment variables
 ├── package.json        # Dependencies and scripts

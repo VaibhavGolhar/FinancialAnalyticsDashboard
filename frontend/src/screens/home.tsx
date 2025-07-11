@@ -222,6 +222,8 @@ const Home: React.FC = () => {
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
     const [reportModalOpen, setReportModalOpen] = useState(false);
     const navigate = useNavigate();
 
@@ -322,7 +324,8 @@ const Home: React.FC = () => {
         return txs.filter(t => {
             const categoryMatch = filterCategory === 'all' || (t.category && t.category.toLowerCase() === filterCategory);
             const statusMatch = filterStatus === 'all' || (t.status && t.status.toLowerCase() === filterStatus);
-            return categoryMatch && statusMatch;
+            const dateMatch = (!fromDate || new Date(t.date) >= new Date(fromDate)) && (!toDate || new Date(t.date) <= new Date(toDate));
+            return categoryMatch && statusMatch && dateMatch;
         });
     };
 
@@ -584,6 +587,23 @@ const Home: React.FC = () => {
                                     }}
                                 />
                             </div>
+                            <input
+                                type="date"
+                                className={styles.dateInput}
+                                value={fromDate}
+                                onChange={e => {
+                                    setFromDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}></input>
+                            <input
+                                type="date"
+                                className={styles.dateInput}
+                                value={toDate}
+                                onChange={e => {
+                                    setToDate(e.target.value);
+                                    setCurrentPage(1);
+                                }}>
+                            </input>
                             <select value={filterCategory} onChange={e => setFilterCategory(e.target.value)} style={{background: '#334155', color: 'white', border: '1px solid #475569', borderRadius: 4, padding: '4px 8px'}}>
                                 <option value="all">All Categories</option>
                                 <option value="expense">Expense</option>
