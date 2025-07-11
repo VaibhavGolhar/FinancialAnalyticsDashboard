@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 // Define interface for Transaction
 export interface ITransaction extends Document {
-  id: number;
+  id: string;
   date: string;
   amount: number;
   category: string;
@@ -17,7 +17,7 @@ export interface ITransaction extends Document {
 const TransactionSchema: Schema = new Schema(
   {
     id: {
-      type: Number,
+      type: String,
       required: [true, 'ID is required'],
       unique: true
     },

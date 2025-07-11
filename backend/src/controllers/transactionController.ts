@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import Transaction from '../models/Transaction';
 import { AuthRequest } from '../middleware/authMiddleware';
 import { logInfo, logError } from '../utils/logger';
+import mongoose from 'mongoose';
 
 // Get transactions for the current user
 export const getTransactions = async (req: AuthRequest, res: Response): Promise<void> => {
@@ -152,7 +153,132 @@ export const getTransactionReport = async (req: AuthRequest, res: Response): Pro
   }
 };
 
+// Create a new transaction
+export const createTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user_profile = req.user?.userId;
+    if (!user_profile) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+    const { amount, category, status, user_id } = req.body;
+    if (!amount || isNaN(amount) || Number(amount) <= 0) {
+      res.status(400).json({ message: 'Amount must be a number above 0' });
+      return;
+    }
+    if (!['Revenue', 'Expense'].includes(category)) {
+      res.status(400).json({ message: 'Category must be Revenue or Expense' });
+      return;
+    }
+    if (!['Paid', 'Pending'].includes(status)) {
+      res.status(400).json({ message: 'Status must be Paid or Pending' });
+      return;
+    }
+    if (!user_id || typeof user_id !== 'string') {
+      res.status(400).json({ message: 'user_id is required and must be a string' });
+      return;
+    }
+    // Generate a new ObjectId and set both _id and id
+    const _id = new mongoose.Types.ObjectId();
+    const transaction = new Transaction({
+      _id,
+      id: _id,
+      amount,
+      category,
+      status,
+      user_id,
+      user_profile,
+      date: new Date(),
+    });
+    await transaction.save();
+    res.status(201).json({ success: true, data: transaction });
+  } catch (error) {
+    logError('Error creating transaction', error);
+    res.status(500).json({ success: false, message: 'Server error while creating transaction' });
+  }
+};
+
+// Update a transaction
+export const updateTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user_profile = req.user?.userId;
+    if (!user_profile) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+    const { id } = req.params;
+    const { amount, category, status, user_id } = req.body;
+    const update: any = {};
+    if (amount !== undefined) {
+      if (isNaN(amount) || Number(amount) <= 0) {
+        res.status(400).json({ message: 'Amount must be a number above 0' });
+        return;
+      }
+      update.amount = amount;
+    }
+    if (category !== undefined) {
+      if (!['Revenue', 'Expense'].includes(category)) {
+        res.status(400).json({ message: 'Category must be Revenue or Expense' });
+        return;
+      }
+      update.category = category;
+    }
+    if (status !== undefined) {
+      if (!['Paid', 'Pending'].includes(status)) {
+        res.status(400).json({ message: 'Status must be Paid or Pending' });
+        return;
+      }
+      update.status = status;
+    }
+    if (user_id !== undefined) {
+      if (typeof user_id !== 'string') {
+        res.status(400).json({ message: 'user_id must be a string' });
+        return;
+      }
+      update.user_id = user_id;
+    }
+    // Only allow update if user_profile matches
+    const transaction = await Transaction.findOneAndUpdate(
+      { _id: id, user_profile },
+      update,
+      { new: true }
+    );
+    if (!transaction) {
+      res.status(404).json({ message: 'Transaction not found or not authorized' });
+      return;
+    }
+    res.status(200).json({ success: true, data: transaction });
+  } catch (error) {
+    logError('Error updating transaction', error);
+    res.status(500).json({ success: false, message: 'Server error while updating transaction' });
+  }
+};
+
+// Delete a transaction
+export const deleteTransaction = async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user_profile = req.user?.userId;
+    if (!user_profile) {
+      res.status(401).json({ message: 'User not authenticated' });
+      return;
+    }
+    const { id } = req.params;
+    const transaction = await Transaction.findOneAndDelete({ _id: id, user_profile });
+    if (!transaction) {
+      res.status(404).json({ message: 'Transaction not found or not authorized' });
+      return;
+    }
+    res.status(200).json({ success: true, message: 'Transaction deleted' });
+  } catch (error) {
+    logError('Error deleting transaction', error);
+    res.status(500).json({ success: false, message: 'Server error while deleting transaction' });
+  }
+};
+
 export default {
   getTransactions,
-  getTransactionReport
+  getTransactionReport,
+  createTransaction,
+  updateTransaction,
+  deleteTransaction
 };

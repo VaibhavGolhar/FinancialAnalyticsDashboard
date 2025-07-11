@@ -201,6 +201,74 @@ const ReportModal: React.FC<{
   );
 };
 
+// Transaction CRUD Modal
+const TransactionModal: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onSave: (data: any) => void;
+  initialData?: any;
+}> = ({ open, onClose, onSave, initialData }) => {
+  const [amount, setAmount] = useState(initialData?.amount || '');
+  const [category, setCategory] = useState(initialData?.category || 'Revenue');
+  const [status, setStatus] = useState(initialData?.status || 'Paid');
+  const [userId, setUserId] = useState(initialData?.user_id || '');
+  const [error, setError] = useState('');
+  useEffect(() => {
+    setAmount(initialData?.amount || '');
+    setCategory(initialData?.category || 'Revenue');
+    setStatus(initialData?.status || 'Paid');
+    setUserId(initialData?.user_id || '');
+    setError('');
+  }, [open, initialData]);
+  const handleSubmit = () => {
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      setError('Amount must be a number above 0');
+      return;
+    }
+    if (!userId) {
+      setError('User ID is required');
+      return;
+    }
+    onSave({ amount: Number(amount), category, status, user_id: userId });
+  };
+  if (!open) return null;
+  return (
+    <div className={styles.modalOverlay}>
+      <div className={styles.modalContent}>
+        <h2>{initialData ? 'Edit' : 'Add'} Transaction</h2>
+        <input
+          className={styles.userInput}
+          type="number"
+          min="1"
+          placeholder="Amount"
+          value={amount}
+          onChange={e => setAmount(e.target.value)}
+        />
+        <select className={styles.userInput} value={category} onChange={e => setCategory(e.target.value)}>
+          <option value="Revenue">Revenue</option>
+          <option value="Expense">Expense</option>
+        </select>
+        <select className={styles.userInput} value={status} onChange={e => setStatus(e.target.value)}>
+          <option value="Paid">Paid</option>
+          <option value="Pending">Pending</option>
+        </select>
+        <input
+          className={styles.userInput}
+          type="text"
+          placeholder="User ID"
+          value={userId}
+          onChange={e => setUserId(e.target.value)}
+        />
+        {error && <div className={styles.errorMessage}>{error}</div>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button className={styles.nextButton} onClick={handleSubmit}>{initialData ? 'Update' : 'Add'}</button>
+          <button className={styles.textButton} onClick={onClose}>Cancel</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Home: React.FC = () => {
     interface Transaction {
         id: number;
@@ -225,6 +293,10 @@ const Home: React.FC = () => {
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
     const [reportModalOpen, setReportModalOpen] = useState(false);
+    const [showModal, setShowModal] = useState(false);
+    const [editData, setEditData] = useState<any>(null);
+    const [deleteId, setDeleteId] = useState<string|null>(null);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -415,6 +487,80 @@ const Home: React.FC = () => {
         }
     }, [chartView, monthYearOptions, selectedMonthYear]);
 
+    // Fetch transactions
+    const fetchTransactions = async () => {
+        setLoading(true);
+        try {
+            const token = localStorage.getItem('token');
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+            const res = await fetch(`${apiBaseUrl}/api/get-transactions`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (data.success) setTransactions(data.data);
+            else setError('Failed to fetch transactions');
+        } catch {
+            setError('Failed to fetch transactions');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { fetchTransactions(); }, []);
+
+    // Add or update transaction
+    const handleSave = async (form: any) => {
+        setError('');
+        const token = localStorage.getItem('token');
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        try {
+          let res;
+          if (editData) {
+            res = await fetch(`${apiBaseUrl}/api/${editData._id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(form),
+            });
+          } else {
+            // Add transaction: call backend with correct format
+            res = await fetch(`${apiBaseUrl}/api/`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify(form),
+            });
+          }
+          const data = await res.json();
+          if (data.success) {
+            setShowModal(false);
+            setEditData(null);
+            fetchTransactions();
+          } else {
+            setError(data.message || 'Failed to save transaction');
+          }
+        } catch {
+          setError('Failed to save transaction');
+        }
+      };
+
+    // Delete transaction
+    const handleDelete = async (id: string) => {
+        setError('');
+        const token = localStorage.getItem('token');
+        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+        try {
+            const res = await fetch(`${apiBaseUrl}/api/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            const data = await res.json();
+            if (data.success) fetchTransactions();
+            else setError(data.message || 'Failed to delete transaction');
+        } catch {
+            setError('Failed to delete transaction');
+        }
+        setDeleteId(null);
+    };
+
     if (loading) {
         return <div className={styles.loadingContainer}>Loading...</div>;
     }
@@ -573,6 +719,9 @@ const Home: React.FC = () => {
                 <div className={styles.transactionsSection}>
                     <div className={styles.transactionsTableHeader}>
                         <h3 className={styles.chartTitle}>Transactions</h3>
+                        <button className={styles.nextButton} style={{marginLeft: 16}} onClick={() => { setShowModal(true); setEditData(null); }}>
+                            + Add Transaction
+                        </button>
                         <div style={{display: 'flex', flex: 1, justifyContent: 'flex-end', alignItems: 'center', gap: '8px'}}>
                             <div className={styles.transactionsSearch}>
                                 <input
@@ -632,6 +781,7 @@ const Home: React.FC = () => {
                             <div>Date</div>
                             <div>Amount</div>
                             <div>Status</div>
+                            <div>Actions</div> {/* New column for actions */}
                         </div>
 
                         {currentTransactions.map((transaction, index) => (
@@ -663,6 +813,23 @@ const Home: React.FC = () => {
                                     }>
                                         {transaction.status || 'Completed'}
                                     </span>
+                                </div>
+                                <div style={{display: 'flex', gap: 8}}>
+                                    <button
+                                        className={styles.textButton}
+                                        title="Edit"
+                                        onClick={() => { setEditData(transaction); setShowModal(true); }}
+                                    >
+                                        Edit
+                                    </button>
+                                    <button
+                                        className={styles.textButton}
+                                        title="Delete"
+                                        onClick={() => setDeleteId(transaction.id)}
+                                        style={{color: '#f87171'}}
+                                    >
+                                        Delete
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -702,6 +869,25 @@ const Home: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Transaction CRUD Modal */}
+                <TransactionModal
+                    open={showModal}
+                    onClose={() => { setShowModal(false); setEditData(null); }}
+                    onSave={handleSave}
+                    initialData={editData}
+                />
+                {deleteId && (
+                    <div className={styles.modalOverlay}>
+                      <div className={styles.modalContent}>
+                        <h3>Are you sure you want to delete this transaction?</h3>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                          <button className={styles.nextButton} onClick={() => handleDelete(deleteId)}>Delete</button>
+                          <button className={styles.textButton} onClick={() => setDeleteId(null)}>Cancel</button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
             </div>
         </div>
     );

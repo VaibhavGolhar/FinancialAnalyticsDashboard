@@ -1,5 +1,5 @@
 import express from 'express';
-import { getTransactions, getTransactionReport } from '../controllers/transactionController';
+import { getTransactions, getTransactionReport, createTransaction, updateTransaction, deleteTransaction } from '../controllers/transactionController';
 import authenticate from '../middleware/authMiddleware';
 import { logInfo } from '../utils/logger';
 
@@ -16,5 +16,14 @@ router.get('/get-transactions', authenticate, getTransactions);
 
 // Generate PDF report with selected columns (protected route)
 router.post('/get-report', authenticate, getTransactionReport);
+
+// Create a new transaction (protected route)
+router.post('/', authenticate, createTransaction);
+
+// Update a transaction (protected route)
+router.put('/:id', authenticate, updateTransaction);
+
+// Delete a transaction (protected route)
+router.delete('/:id', authenticate, deleteTransaction);
 
 export default router;
