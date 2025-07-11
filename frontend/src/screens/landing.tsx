@@ -9,6 +9,13 @@ const Landing: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showRegister, setShowRegister] = useState(false);
+    const [registerUserId, setRegisterUserId] = useState('');
+    const [registerPassword, setRegisterPassword] = useState('');
+    const [registerConfirm, setRegisterConfirm] = useState('');
+    const [registerError, setRegisterError] = useState('');
+    const [registerLoading, setRegisterLoading] = useState(false);
+    const [registerSuccess, setRegisterSuccess] = useState('');
     const navigate = useNavigate();
 
     const handleNextClick = () => {
@@ -60,6 +67,39 @@ const Landing: React.FC = () => {
             console.log(err);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleRegister = async () => {
+        setRegisterError('');
+        setRegisterSuccess('');
+        if (!registerUserId.trim() || !registerPassword.trim() || !registerConfirm.trim()) {
+            setRegisterError('All fields are required.');
+            return;
+        }
+        if (registerPassword !== registerConfirm) {
+            setRegisterError('Passwords do not match.');
+            return;
+        }
+        setRegisterLoading(true);
+        try {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL;
+            const response = await fetch(`${apiBaseUrl}/api/auth/register`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: registerUserId, password: registerPassword })
+            });
+            const data = await response.json();
+            if (response.ok) {
+                setRegisterSuccess('Account created! You can now log in.');
+                setTimeout(() => setShowRegister(false), 1200);
+            } else {
+                setRegisterError(data.message || 'Registration failed.');
+            }
+        } catch (err) {
+            setRegisterError('Network error. Please try again.');
+        } finally {
+            setRegisterLoading(false);
         }
     };
 
@@ -124,9 +164,18 @@ const Landing: React.FC = () => {
                             </button>
                         )}
                     </div>
-
                 </div>
 
+                <div className={styles.registerLink}>
+                    <span>Don't have an account? </span>
+                    <button
+                        type="button"
+                        className={styles.linkButton}
+                        onClick={() => setShowRegister(true)}
+                    >
+                        Create here.
+                    </button>
+                </div>
                 <div className={styles.bottomBar}>
                     <div className={styles.curatedBy}>
                         <span>created by</span>
@@ -135,7 +184,6 @@ const Landing: React.FC = () => {
                         </div>
                     </div>
                 </div>
-
             </div>
 
             {/* Main Content */}
@@ -197,6 +245,53 @@ const Landing: React.FC = () => {
                 {/* Bottom Bar */}
 
             </div>
+
+            {showRegister && (
+                <div className={styles.modalOverlay}>
+                    <div className={styles.modalContent}>
+                        <h2>Create Account</h2>
+                        <input
+                            className={styles.userInput}
+                            type="text"
+                            placeholder="Username"
+                            value={registerUserId}
+                            onChange={e => setRegisterUserId(e.target.value)}
+                        />
+                        <input
+                            className={styles.userInput}
+                            type="password"
+                            placeholder="Password"
+                            value={registerPassword}
+                            onChange={e => setRegisterPassword(e.target.value)}
+                        />
+                        <input
+                            className={styles.userInput}
+                            type="password"
+                            placeholder="Confirm Password"
+                            value={registerConfirm}
+                            onChange={e => setRegisterConfirm(e.target.value)}
+                        />
+                        {registerError && <div className={styles.errorMessage}>{registerError}</div>}
+                        {registerSuccess && <div className={styles.successMessage}>{registerSuccess}</div>}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                            <button
+                                className={styles.nextButton}
+                                onClick={handleRegister}
+                                disabled={registerLoading}
+                            >
+                                {registerLoading ? 'Registering...' : 'Register'}
+                            </button>
+                            <button
+                                className={styles.textButton}
+                                onClick={() => setShowRegister(false)}
+                                disabled={registerLoading}
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

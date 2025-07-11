@@ -16,7 +16,13 @@ export const getTransactions = async (req: AuthRequest, res: Response): Promise<
     }
 
     // Fetch transactions for the user
-    const transactions = await Transaction.find({})
+    let query = {};
+    if (userId === 'admin') {
+      query = { user_profile: 'https://thispersondoesnotexist.com/' };
+    } else {
+      query = { user_profile: userId };
+    }
+    const transactions = await Transaction.find(query)
       .sort({ date: -1 }) // Sort by date descending (newest first)
       .exec();
 
